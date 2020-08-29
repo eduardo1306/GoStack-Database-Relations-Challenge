@@ -23,16 +23,16 @@ class CustomersRepository implements ICustomersRepository {
   }
 
   public async findById(id: string): Promise<Customer | undefined> {
-    const findCustomer = await this.ormRepository.findOne(id);
+    const findCustomer = await this.ormRepository.findOne({
+      where: { id },
+    });
 
     return findCustomer;
   }
 
   public async findByEmail(email: string): Promise<Customer | undefined> {
     const findCustomer = await this.ormRepository.findOne({
-      where: {
-        email,
-      },
+      where: { email },
     });
 
     return findCustomer;

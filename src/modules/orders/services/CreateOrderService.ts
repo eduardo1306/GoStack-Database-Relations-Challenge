@@ -32,27 +32,66 @@ class CreateOrderService {
     const customer = await this.customersRepository.findById(customer_id);
 
     if (!customer) {
-      throw new AppError('Esse customer não existe!');
+      throw new AppError('Customer not found!');
     }
 
-    const findProduct = await this.productsRepository.findAllById(products);
+    const findProducts = await this.productsRepository.findAllById(products);
 
-    if (!findProduct) {
-      throw new AppError('You could need to register those products');
+    if (!findProducts.length) {
+      throw new AppError('Products not found');
     }
 
-    const [{ id, price, quantity }] = findProduct;
+    const productsIds = findProducts.map(product => product.id);
+
+    const inexistentProducts = products.filter(
+      product => !productsIds.includes(product.id),
+    );
+
+    if (inexistentProducts.length) {
+      throw new AppError(
+        `Could not find product(s) ${inexistentProducts.map(
+          product => product.id,
+        )}`,
+      );
+    }
+
+    const productsWithoutQuantityAvailable = products.filter(product =>
+      findProducts
+        .filter(p => p.id === product.id)
+        .map(p => p.quantity < product.quantity),
+    );
+
+    if (productsWithoutQuantityAvailable.length) {
+      throw new AppError(
+        `The quantity ${productsWithoutQuantityAvailable.map(
+          product => product.quantity,
+        )} is not available for ${productsWithoutQuantityAvailable.map(
+          product => product.id,
+        )}`,
+      );
+    }
+
+    const serializedProducts = products.map(product => {
+      return {
+        product_id: product.id,
+        quantity: product.quantity,
+        price: findProducts.filter(p => p.id === product.id)[0].price,
+      };
+    });
 
     const order = await this.ordersRepository.create({
       customer,
-      products: [
-        {
-          product_id: id,
-          price,
-          quantity,
-        },
-      ],
+      products: serializedProducts,
     });
+
+    const orderedProductsQuantity = products.map(product => ({
+      id: product.id,
+      quantity:
+        findProducts.filter(p => p.id === product.id)[0].quantity -
+        product.quantity,
+    }));
+
+    await this.productsRepository.updateQuantity(orderedProductsQuantity);
 
     return order;
   }
