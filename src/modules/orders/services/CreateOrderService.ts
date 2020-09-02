@@ -55,10 +55,10 @@ class CreateOrderService {
       );
     }
 
-    const productsWithoutQuantityAvailable = products.filter(product =>
-      findProducts
-        .filter(p => p.id === product.id)
-        .map(p => p.quantity < product.quantity),
+    const productsWithoutQuantityAvailable = products.filter(
+      product =>
+        findProducts.filter(p => p.id === product.id)[0].quantity <
+        product.quantity,
     );
 
     if (productsWithoutQuantityAvailable.length) {
